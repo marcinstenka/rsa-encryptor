@@ -19,7 +19,7 @@ def generate_rsa_key_pair(pin):
     )
     public_key = private_key.public_key()
 
-    aes_key = pin.to_bytes(32, 'big')
+    aes_key = int(pin).to_bytes(32, 'big')
     cipher = Cipher(algorithms.AES(aes_key), modes.CFB(INITIAL_VECTOR_BYTES), backend=default_backend())
     encryptor = cipher.encryptor()
 
@@ -48,16 +48,8 @@ def save_keys_to_files(encrypted_private_key, public_key):
         f.write(public_key)
 
 
-def main(pin):
+def generate(pin):
+
     encrypted_private_key, public_key, aes_key = generate_rsa_key_pair(pin)
 
     save_keys_to_files(encrypted_private_key, public_key)
-
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python rsa-generate.py <PIN>")
-        sys.exit(1)
-
-    pin = int(sys.argv[1])
-
-    main(pin)
