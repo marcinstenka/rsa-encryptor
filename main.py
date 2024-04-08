@@ -1,8 +1,5 @@
 from tkinter import *
 from tkinter import ttk
-from rsa import generate_rsa_key_pair
-
-
 
 root = Tk()
 frm = ttk.Frame(root, padding=10)
