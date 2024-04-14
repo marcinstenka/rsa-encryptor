@@ -1,36 +1,37 @@
-from xml.dom import minidom
-import xml.etree.ElementTree as xml_gen
+import xml.etree.ElementTree as xmlGen
 import os
 import time
+from datetime import datetime
 
-def generateXML(filename):
-    Signature = xml_gen.Element("Signature")
 
-    DocumentInfo = xml_gen.Element("DocumentInfo")
+def generateXML(pathToFile, filename='signature.xml'):
+    Signature = xmlGen.Element("Signature")
+
+    DocumentInfo = xmlGen.Element("DocumentInfo")
     Signature.append(DocumentInfo)
 
-    Size = xml_gen.SubElement(DocumentInfo, "Size")
-    Size.text = "1243 KB"
-    Extension = xml_gen.SubElement(DocumentInfo, "Extension")
-    Extension.text = "zzzz"
-    DateModified = xml_gen.SubElement(DocumentInfo, "DateModified")
-    DateModified.text = "xxxx"
+    file_stats = os.stat(pathToFile)
+    file_name, file_extension = os.path.splitext(pathToFile)
+    Size = xmlGen.SubElement(DocumentInfo, "Size")
+    Size.text = str(file_stats.st_size) + " B"
+    Extension = xmlGen.SubElement(DocumentInfo, "Extension")
+    Extension.text = file_extension
+    DateModified = xmlGen.SubElement(DocumentInfo, "DateModified")
+    DateModified.text = str(datetime.fromtimestamp(file_stats.st_mtime))
 
-    SigningUser = xml_gen.SubElement(Signature, "SigningUser")
+    SigningUser = xmlGen.SubElement(Signature, "SigningUser")
     SigningUser.text = os.getlogin()
 
-    EncryptedHashAlgorithm = xml_gen.SubElement(Signature, "EncryptedHashAlgorithm")
+    EncryptedHashAlgorithm = xmlGen.SubElement(Signature, "EncryptedHashAlgorithm")
     EncryptedHashAlgorithm.text = "RSA"
 
-    EncryptedHash = xml_gen.SubElement(Signature, "EncryptedHash")
+    EncryptedHash = xmlGen.SubElement(Signature, "EncryptedHash")
     EncryptedHash.text = "HASH"
 
-    Timestamp = xml_gen.SubElement(Signature, "Timestamp")
+    Timestamp = xmlGen.SubElement(Signature, "Timestamp")
     Timestamp.text = str(time.time())
 
-    tree = xml_gen.ElementTree(Signature)
+    tree = xmlGen.ElementTree(Signature)
 
     with open(filename, "wb") as files:
         tree.write(files)
-
-generateXML('signature.xml')
