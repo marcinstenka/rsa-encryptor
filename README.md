@@ -3,6 +3,6 @@ Tool for Emulating the Qualified Electronic Signature
 
 You need to have Python & pip installed to run this project.
 
-# Made by:
+## Made by:
 - Oskar Wilda
 - Marcin Stenka
