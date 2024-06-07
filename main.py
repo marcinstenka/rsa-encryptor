@@ -1,9 +1,10 @@
 import os.path
 import tkinter as tk
+import hashlib as hl
 from tkinter import ttk
 from tkinter.ttk import *
 from tkinter import *
-from generator import generate
+from generator import *
 from tkinter.filedialog import askopenfilename
 
 
@@ -22,7 +23,6 @@ def enterPIN():
 
 
 def generateRSA():
-    global entry
     global pinWindow
     global label2
     if len(entry.get()) == 4:
@@ -35,6 +35,7 @@ def chooseFileAndKey():
     global labelFile
     global labelKey
     global fileAndKeyWindow
+    global labelError
     Tk().withdraw()
     fileAndKeyWindow = Toplevel(win)
     win.eval(f'tk::PlaceWindow {str(fileAndKeyWindow)} center')
@@ -46,21 +47,59 @@ def chooseFileAndKey():
     fileAndKeyWindow.rowconfigure(0, weight=1)
     fileAndKeyWindow.rowconfigure(1, weight=1)
     fileAndKeyWindow.rowconfigure(2, weight=1)
+    fileAndKeyWindow.rowconfigure(3, weight=1)
 
-    Label(fileAndKeyWindow, text="Wybierz plik do podpisania oraz klucz").grid(row=0, column=1, pady=10)
-    Button(fileAndKeyWindow, text="Wybierz plik", command=chooseFile).grid(row=1, column=0, padx=10, pady=(10, 0))
-    Button(fileAndKeyWindow, text="Wybierz klucz", command=chooseKeyFile).grid(row=1, column=2, padx=10, pady=(10, 0))
+    Label(fileAndKeyWindow, text="Wybierz plik do podpisania oraz klucz").grid(row=0, column=1, pady=(10, 0))
+    Button(fileAndKeyWindow, text="Wybierz plik", command=chooseFile).grid(row=1, column=0, padx=10)
+    Button(fileAndKeyWindow, text="Wybierz klucz", command=chooseKeyFile).grid(row=1, column=2, padx=10)
     labelFile = Label(fileAndKeyWindow, text=fileString)
     labelFile.grid(row=2, column=0, padx=10, pady=(0, 10))
     labelKey = Label(fileAndKeyWindow, text=keyString)
     labelKey.grid(row=2, column=2, padx=10, pady=(0, 10))
 
+    labelError = Label(fileAndKeyWindow, text="")
+    labelError.grid(row=2, column=1, padx=10)
+    Button(fileAndKeyWindow, text="Szyfruj", command=encrypt).grid(row=3, column=1, padx=10, pady=(0, 10))
+
+def getPIN():
+    global pinToCheck
+    checkPinWindow = Toplevel(win)
+    win.eval(f'tk::PlaceWindow {str(checkPinWindow)} center')
+    checkPinWindow.title("Enter PIN")
+    checkPinWindow.geometry("145x100")
+    Label(checkPinWindow, text="Enter PIN:").grid(row=0, padx=10, pady=(10, 0))
+    pinToCheck = Entry(checkPinWindow)
+    pinToCheck.grid(row=1, pady=0, padx=10)
+    Button(checkPinWindow, text="Zatwierdź", command=decryptPrivateKey).grid(row=2, padx=10, pady=(10, 0))
+
+def decryptPrivateKey():
+    private_key = load_and_decrypt_private_key(labelKey.cget("text"), str(pinToCheck.get()))
+    print(private_key)
+def encrypt():
+    global hash_of_file
+    if labelFile.cget("text") != "" and labelKey.cget("text"):
+        hash_of_file = hashFile()
+        print(str(hash_of_file))
+        getPIN()
+    else:
+        labelError.config(text="Siema", foreground="red")
+
+def hashFile():
+    hasher = hl.sha256()
+    with open(str(filePath), 'rb') as file:
+        chunk = file.read(8192)
+        while chunk:
+            hasher.update(chunk)
+            chunk = file.read(8192)
+    return hasher.hexdigest()
 
 def chooseFile():
     global fileString
+    global filePath
     filePath = askopenfilename()
     fileString = os.path.basename(filePath)
     labelFile.config(text=fileString)
+    labelError.config(text="", foreground="red")
     fileAndKeyWindow.focus_set()
 
 
@@ -69,8 +108,8 @@ def chooseKeyFile():
     keyPath = askopenfilename()
     keyString = os.path.basename(keyPath)
     labelKey.config(text=keyString)
+    labelError.config(text="", foreground="red")
     fileAndKeyWindow.focus_set()
-
 
 fileString = ""
 keyString = ""

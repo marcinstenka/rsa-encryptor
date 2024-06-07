@@ -48,6 +48,30 @@ def save_keys_to_files(encrypted_private_key, public_key):
         f.write(public_key)
 
 
+def decrypt_private_key(encrypted_private_key, pin):
+    aes_key = int(pin).to_bytes(32, 'big')
+    cipher = Cipher(algorithms.AES(aes_key), modes.CFB(INITIAL_VECTOR_BYTES), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_private_key_bytes = decryptor.update(encrypted_private_key) + decryptor.finalize()
+
+    private_key = serialization.load_pem_private_key(
+        decrypted_private_key_bytes,
+        password=None,
+        backend=default_backend()
+    )
+
+    return private_key
+
+
+def load_and_decrypt_private_key(filename, pin):
+    with open(filename, 'rb') as f:
+        encrypted_private_key_pem = f.read()
+        # Extract the base64 encoded part
+        encrypted_private_key_base64 = b''.join(encrypted_private_key_pem.split(b'\n')[1:-1])
+        encrypted_private_key = base64.decodebytes(encrypted_private_key_base64)
+        return decrypt_private_key(encrypted_private_key, pin)
+
+
 def generate(pin):
 
     encrypted_private_key, public_key, aes_key = generate_rsa_key_pair(pin)
