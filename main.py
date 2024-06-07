@@ -6,7 +6,9 @@ from tkinter.ttk import *
 from tkinter import *
 from generator import *
 from tkinter.filedialog import askopenfilename
-
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from xml_generator import *
 
 def enterPIN():
     global entry
@@ -19,7 +21,6 @@ def enterPIN():
     entry = Entry(pinWindow)
     entry.grid(row=1, pady=0, padx=10)
     Button(pinWindow, text="Generuj", command=generateRSA).grid(row=2, padx=10, pady=(10, 0))
-
 
 
 def generateRSA():
@@ -61,6 +62,7 @@ def chooseFileAndKey():
     labelError.grid(row=2, column=1, padx=10)
     Button(fileAndKeyWindow, text="Szyfruj", command=encrypt).grid(row=3, column=1, padx=10, pady=(0, 10))
 
+
 def getPIN():
     global pinToCheck
     checkPinWindow = Toplevel(win)
@@ -72,17 +74,60 @@ def getPIN():
     pinToCheck.grid(row=1, pady=0, padx=10)
     Button(checkPinWindow, text="Zatwierdź", command=decryptPrivateKey).grid(row=2, padx=10, pady=(10, 0))
 
+
+
 def decryptPrivateKey():
+    global private_key
     private_key = load_and_decrypt_private_key(labelKey.cget("text"), str(pinToCheck.get()))
-    print(private_key)
+    print("Private key decrypted")
+    # Po zdeszyfrowaniu klucza prywatnego, podpisz plik
+    signature = sign_file_with_rsa(private_key, filePath)
+    save_signature(signature, 'signature.sig')
+    labelError.config(text="Plik podpisany pomyślnie!", foreground="green")
+    fileAndKeyWindow.destroy()
+
+    # Zintegruj podpis z dokumentem
+    xml_signature_path = integrate_xml_signature('signature.xml', filePath)
+    print(f"Integrated XML signature: {xml_signature_path}")
+
+def sign_file_with_rsa(private_key, file_path):
+    # Wczytaj zawartość pliku
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+
+    # Oblicz hash pliku
+    hash_obj = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    hash_obj.update(file_data)
+    file_hash = hash_obj.finalize()
+    # Podpisz hash pliku kluczem prywatnym
+    signature = private_key.sign(
+        file_hash,
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
+
+    return signature
+
+
+def save_signature(signature, output_path):
+    with open(output_path, 'wb') as f:
+        f.write(signature)
+
+
 def encrypt():
     global hash_of_file
     if labelFile.cget("text") != "" and labelKey.cget("text"):
         hash_of_file = hashFile()
         print(str(hash_of_file))
+        generateXML(filePath, hash_of_file)
+
         getPIN()
     else:
         labelError.config(text="Siema", foreground="red")
+
 
 def hashFile():
     hasher = hl.sha256()
@@ -92,6 +137,7 @@ def hashFile():
             hasher.update(chunk)
             chunk = file.read(8192)
     return hasher.hexdigest()
+
 
 def chooseFile():
     global fileString
@@ -111,10 +157,11 @@ def chooseKeyFile():
     labelError.config(text="", foreground="red")
     fileAndKeyWindow.focus_set()
 
+
 fileString = ""
 keyString = ""
 win = tk.Tk()
-#win.eval('tk::PlaceWindow . center')
+# win.eval('tk::PlaceWindow . center')
 win.geometry("+720+400")
 win.title("Signing APP - BSK Project")
 
@@ -128,7 +175,6 @@ win.rowconfigure(2, weight=1)
 
 label1 = ttk.Label(win, text="Signing APP - BSK Project", font=("Arial", 14))
 label1.grid(row=0, column=1, pady=10)
-
 button1 = ttk.Button(win, text="Generuj parę kluczy", width=20, command=enterPIN)
 button1.grid(row=1, column=0, pady=20, padx=20)
 

@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 
-def generateXML(pathToFile, filename='signature.xml'):
+def generateXML(pathToFile, hash, filename='signature.xml'):
     Signature = xmlGen.Element("Signature")
 
     DocumentInfo = xmlGen.Element("DocumentInfo")
@@ -26,7 +26,7 @@ def generateXML(pathToFile, filename='signature.xml'):
     EncryptedHashAlgorithm.text = "RSA"
 
     EncryptedHash = xmlGen.SubElement(Signature, "EncryptedHash")
-    EncryptedHash.text = "HASH"
+    EncryptedHash.text = str(hash)
 
     Timestamp = xmlGen.SubElement(Signature, "Timestamp")
     Timestamp.text = str(time.time())
@@ -35,3 +35,29 @@ def generateXML(pathToFile, filename='signature.xml'):
 
     with open(filename, "wb") as files:
         tree.write(files)
+
+def integrate_xml_signature(xml_signature_path, original_file_path):
+    # Wczytaj zawartość pliku XML z podpisem
+    xml_tree = xmlGen.parse(xml_signature_path)
+    root = xml_tree.getroot()
+
+    # Wczytaj niezbędne informacje z pliku XML
+    signing_user = root.find('.//SigningUser').text
+    encrypted_hash_algorithm = root.find('.//EncryptedHashAlgorithm').text
+    encrypted_hash = root.find('.//EncryptedHash').text
+    timestamp = root.find('.//Timestamp').text
+
+    # Zapisz informacje do pliku XML
+    xml_signature_info = {
+        "SigningUser": signing_user,
+        "EncryptedHashAlgorithm": encrypted_hash_algorithm,
+        "EncryptedHash": encrypted_hash,
+        "Timestamp": timestamp
+    }
+
+    # Zintegruj podpis z dokumentem
+    integrated_signature_filename = f"{original_file_path}_signed.xml"
+    with open(integrated_signature_filename, "wb") as files:
+        xml_tree.write(files)
+
+    return integrated_signature_filename
