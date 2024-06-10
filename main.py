@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from xml_generator import *
+from xml.etree import ElementTree as ET
 
 
 def enterPIN():
@@ -37,6 +38,7 @@ def generateRSA():
 def chooseFileAndKey(action):
     global labelFile
     global labelKey
+    global labelXML
     global fileAndKeyWindow
     global labelError
     global currentAction
@@ -67,7 +69,10 @@ def chooseFileAndKey(action):
     if currentAction == 'sign':
         Button(fileAndKeyWindow, text="Podpisz", command=encrypt).grid(row=3, column=1, padx=10, pady=(0, 10))
     elif currentAction == 'verify':
-        Button(fileAndKeyWindow, text="Weryfikuj", command=verify_signature).grid(row=3, column=1, padx=10, pady=(0, 10))
+        Button(fileAndKeyWindow, text="Wybierz podpis", command=chooseXMLFile).grid(row=1, column=1, padx=10)
+        labelXML = Label(fileAndKeyWindow, text=xmlString)
+        labelXML.grid(row=2, column=1, padx=10, pady=(0, 10))
+        Button(fileAndKeyWindow, text="Weryfikuj", command=verify_signature).grid(row=4, column=1, padx=10, pady=(0, 10))
     elif currentAction == 'encrypt':
         Button(fileAndKeyWindow, text="Szyfruj", command=encrypt_file).grid(row=3, column=1, padx=10, pady=(0, 10))
     elif currentAction == 'decrypt':
@@ -132,28 +137,144 @@ def save_signature(signature, output_path):
 
 
 def encrypt():
-    global hash_of_file
-    global filePath
     if labelFile.cget("text") != "" and labelKey.cget("text"):
-        hash_of_file = hashFile()
-        print(str(hash_of_file))
-        generateXML(filePath, hash_of_file)
-        getPIN()
+        getPINforSign()
     else:
         labelError.config(text="Wybierz plik oraz klucz przed podpisywaniem", foreground="red")
 
+def getPINforSign():
+    global pinToCheck
+    checkPinWindow = Toplevel(win)
+    win.eval(f'tk::PlaceWindow {str(checkPinWindow)} center')
+    checkPinWindow.title("Enter PIN")
+    checkPinWindow.geometry("145x100")
+    Label(checkPinWindow, text="Enter PIN:").grid(row=0, padx=10, pady=(10, 0))
+    pinToCheck = Entry(checkPinWindow)
+    pinToCheck.grid(row=1, pady=0, padx=10)
+    Button(checkPinWindow, text="Zatwierdź", command=sign).grid(row=2, padx=10, pady=(10, 0))
+
+
+def sign():
+    private_key = load_and_decrypt_private_key(labelKey.cget("text"), str(pinToCheck.get()))
+    hash_of_file = hashFile()
+    print(str(hash_of_file))
+
+    # Podpisz hash za pomocą klucza prywatnego
+    signature = private_key.sign(
+        hash_of_file.encode(),  # Konwertuj hash na bajty przed podpisaniem
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
+
+    # Konwertuj podpis do formatu Base64
+    signature_base64 = base64.b64encode(signature).decode('utf-8')
+
+    # Przekazuj podpis w formacie Base64 do funkcji generateXML
+    generateXML(filePath, signature_base64)
+
 
 def verify_signature():
-    global hash_of_file
     global filePath
+    global labelError
+
     if labelFile.cget("text") != "" and labelKey.cget("text"):
-        hash_of_file = hashFile()
-        print(str(hash_of_file))
-        generateXML(filePath, hash_of_file)
-        labelError.config(text="Weryfikacja podpisu zakończona", foreground="green")
+        # Wczytaj zawartość pliku XML
+        try:
+            xml_content = read_xml_file(labelXML.cget("text"))
+        except Exception as e:
+            labelError.config(text="Błąd odczytu pliku XML", foreground="red")
+            return
+
+        # Wczytaj z pliku XML zaszyfrowany hash
+        encrypted_hash = xml_content.find('.//EncryptedHash').text.strip()
+
+        # Odszyfruj zaszyfrowany hash za pomocą wybranego klucza
+        try:
+            decrypted_hash = decrypt_hash(encrypted_hash, keyPath)
+        except Exception as e:
+            labelError.config(text="Błąd deszyfrowania hasha z pliku XML", foreground="red")
+            return
+
+        # Oblicz hash pliku
+        actual_hash = hashFile()
+
+        # Porównaj odszyfrowany hash z obliczonym haszem pliku
+        if actual_hash == decrypted_hash:
+            labelError.config(text="Weryfikacja podpisu zakończona powodzeniem", foreground="green")
+        else:
+            labelError.config(text="Weryfikacja podpisu nie powiodła się", foreground="red")
     else:
         labelError.config(text="Wybierz plik oraz klucz przed weryfikacją", foreground="red")
 
+
+def read_xml_file(xml_filename):
+    """
+    Funkcja odczytująca zawartość pliku XML.
+
+    Args:
+        xml_filename (str): Nazwa pliku XML.
+
+    Returns:
+        xml_content (ElementTree): Zawartość pliku XML jako drzewo elementów.
+    """
+    try:
+        with open(xml_filename, 'r') as xml_file:
+            xml_content = ET.parse(xml_file)
+        return xml_content
+    except Exception as e:
+        raise e
+
+def decrypt_hash(encrypted_hash, private_key_filename):
+    """
+    Funkcja deszyfrująca zaszyfrowany hash za pomocą klucza prywatnego.
+
+    Args:
+        encrypted_hash (str): Zaszyfrowany hash.
+        private_key_filename (str): Nazwa pliku zawierającego klucz prywatny.
+
+    Returns:
+        decrypted_hash (str): Odszyfrowany hash.
+    """
+    try:
+        # Wczytaj klucz prywatny z pliku
+        with open(private_key_filename, 'rb') as key_file:
+            private_key = serialization.load_pem_private_key(
+                key_file.read(),
+                password=None,
+                backend=default_backend()
+            )
+
+        # Odszyfruj zaszyfrowany hash
+        decrypted_hash = private_key.decrypt(
+            base64.b64decode(encrypted_hash),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        ).decode('utf-8')
+
+        return decrypted_hash
+    except Exception as e:
+        raise e
+
+
+def convert_der_to_pem(der_key_filename):
+    with open(der_key_filename, "rb") as der_key_file:
+        der_key_data = der_key_file.read()
+
+    key = serialization.load_der_private_key(der_key_data, password=None)
+
+    pem_key_data = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    return pem_key_data
 
 def encrypt_file():
     global hash_of_file
@@ -235,6 +356,7 @@ def chooseFile():
 
 def chooseKeyFile():
     global keyString
+    global keyPath
     keyPath = askopenfilename()
     keyString = os.path.basename(keyPath)
     labelKey.config(text=keyString)
@@ -242,8 +364,18 @@ def chooseKeyFile():
     fileAndKeyWindow.focus_set()
 
 
+def chooseXMLFile():
+    global xmlString
+    xmlPath = askopenfilename()
+    xmlString = os.path.basename(xmlPath)
+    labelXML.config(text=xmlString)
+    labelError.config(text="", foreground="red")
+    fileAndKeyWindow.focus_set()
+
+
 fileString = ""
 keyString = ""
+xmlString = ""
 win = tk.Tk()
 win.geometry("+720+400")
 win.title("Signing APP - BSK Project")
@@ -258,6 +390,9 @@ win.rowconfigure(2, weight=1)
 
 label1 = ttk.Label(win, text="Signing APP - BSK Project", font=("Arial", 14))
 label1.grid(row=0, column=1, pady=10)
+
+button1 = ttk.Button(win, text="Generuj parę kluczy", width=20, command=enterPIN)
+button1.grid(row=2, column=0, pady=20, padx=20)
 
 button1 = ttk.Button(win, text="Podpisz plik", width=20, command=lambda: chooseFileAndKey('sign'))
 button1.grid(row=1, column=0, pady=20, padx=20)
