@@ -65,30 +65,36 @@ def chooseFileAndKey():
 
 def getPIN():
     global pinToCheck
+    global checkPinWindow
+    global pinErrorLabel
     checkPinWindow = Toplevel(win)
     win.eval(f'tk::PlaceWindow {str(checkPinWindow)} center')
     checkPinWindow.title("Enter PIN")
-    checkPinWindow.geometry("145x100")
+    checkPinWindow.geometry("145x120")
     Label(checkPinWindow, text="Enter PIN:").grid(row=0, padx=10, pady=(10, 0))
     pinToCheck = Entry(checkPinWindow)
     pinToCheck.grid(row=1, pady=0, padx=10)
-    Button(checkPinWindow, text="Zatwierdź", command=decryptPrivateKey).grid(row=2, padx=10, pady=(10, 0))
-
+    pinErrorLabel = Label(checkPinWindow, text="", fg="red")
+    pinErrorLabel.grid(row=2, padx=10, pady=(10, 0))
+    Button(checkPinWindow, text="Zatwierdź", command=decryptPrivateKey).grid(row=3, padx=10, pady=(10, 0))
 
 
 def decryptPrivateKey():
     global private_key
-    private_key = load_and_decrypt_private_key(labelKey.cget("text"), str(pinToCheck.get()))
-    print("Private key decrypted")
-    # Po zdeszyfrowaniu klucza prywatnego, podpisz plik
-    signature = sign_file_with_rsa(private_key, filePath)
-    save_signature(signature, 'signature.sig')
-    labelError.config(text="Plik podpisany pomyślnie!", foreground="green")
-    fileAndKeyWindow.destroy()
+    global checkPinWindow
+    try:
+        private_key = load_and_decrypt_private_key(labelKey.cget("text"), str(pinToCheck.get()))
+        signature = sign_file_with_rsa(private_key, filePath)
+        save_signature(signature, 'signature.sig')
+        labelError.config(text="Plik podpisany pomyślnie!", foreground="green")
+        fileAndKeyWindow.destroy()
+        checkPinWindow.destroy()
 
-    # Zintegruj podpis z dokumentem
-    xml_signature_path = integrate_xml_signature('signature.xml', filePath)
-    print(f"Integrated XML signature: {xml_signature_path}")
+        xml_signature_path = integrate_xml_signature('signature.xml', filePath)
+        print(f"Integrated XML signature: {xml_signature_path}")
+    except ValueError:
+        pinErrorLabel.config(text="Nieprawidłowy PIN", foreground="red")
+
 
 def sign_file_with_rsa(private_key, file_path):
     # Wczytaj zawartość pliku
@@ -165,7 +171,6 @@ win = tk.Tk()
 win.geometry("+720+400")
 win.title("Signing APP - BSK Project")
 
-# Ustawienie wag dla kolumn i wierszy
 win.columnconfigure(0, weight=1)
 win.columnconfigure(1, weight=1)
 win.columnconfigure(2, weight=1)
@@ -186,12 +191,7 @@ label2.grid(row=2, column=1, pady=(0, 20))
 
 
 def on_resize(event):
-    # Tutaj możesz dodać kod reagujący na zmianę rozmiaru okna
     pass
 
 win.bind("<Configure>", on_resize)
 win.mainloop()
-
-
-
-

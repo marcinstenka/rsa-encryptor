@@ -5,11 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5f48b745-741b-4d4c-a81f-9558224d53ca" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/a.txt_signed.xml" beforeDir="false" afterPath="$PROJECT_DIR$/a.txt_signed.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/signature.sig" beforeDir="false" afterPath="$PROJECT_DIR$/signature.sig" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/signature.xml" beforeDir="false" afterPath="$PROJECT_DIR$/signature.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/xml-generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/xml_generator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
