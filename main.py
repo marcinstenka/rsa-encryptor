@@ -227,41 +227,67 @@ def read_xml_file(xml_filename):
     except Exception as e:
         raise e
 
-def decrypt_hash(encrypted_hash, private_key_filename):
-    """
-    Funkcja deszyfrująca zaszyfrowany hash za pomocą klucza prywatnego.
+def verify_signature():
+    global filePath
+    global labelError
 
-    Args:
-        encrypted_hash (str): Zaszyfrowany hash.
-        private_key_filename (str): Nazwa pliku zawierającego klucz prywatny.
+    if labelFile.cget("text") != "" and labelKey.cget("text"):
+        # Wczytaj zawartość pliku XML
+        try:
+            xml_content = read_xml_file(labelXML.cget("text"))
+        except Exception as e:
+            labelError.config(text="Błąd odczytu pliku XML", foreground="red")
+            return
 
-    Returns:
-        decrypted_hash (str): Odszyfrowany hash.
-    """
-    try:
-        # Wczytaj klucz prywatny z pliku
-        with open(private_key_filename, 'rb') as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(),
-                password=None,
-                backend=default_backend()
+        # Wczytaj z pliku XML zaszyfrowany hash
+        encrypted_hash = xml_content.find('.//EncryptedHash').text.strip()
+
+        # Wczytaj klucz publiczny z pliku
+        try:
+            with open(keyPath, 'rb') as key_file:
+                public_key = serialization.load_pem_public_key(
+                    key_file.read(),
+                    backend=default_backend()
+                )
+        except Exception as e:
+            labelError.config(text="Błąd odczytu klucza publicznego", foreground="red")
+            return
+
+        # Oblicz hash pliku
+        try:
+            actual_hash = hashFiletxt()
+        except Exception as e:
+            labelError.config(text="Błąd obliczania hasha pliku", foreground="red")
+            return
+
+        # Zweryfikuj podpis przy użyciu klucza publicznego
+        try:
+            public_key.verify(
+                base64.b64decode(encrypted_hash),
+                actual_hash.encode('utf-8'),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                ),
+            hashes.SHA256()
             )
+            labelError.config(text="Weryfikacja podpisu zakończona powodzeniem", foreground="green")
+        except Exception as e:
+            labelError.config(text="Weryfikacja podpisu nie powiodła się", foreground="red")
+    else:
+        labelError.config(text="Wybierz plik oraz klucz przed weryfikacją", foreground="red")
 
-        # Odszyfruj zaszyfrowany hash
-        decrypted_hash = private_key.decrypt(
-            base64.b64decode(encrypted_hash),
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        ).decode('utf-8')
+def read_xml_file(file_path):
+    tree = ET.parse(file_path)
+    return tree.getroot()
 
-        return decrypted_hash
-    except Exception as e:
-        raise e
-
-
+def hashFiletxt():
+    with open(filePath, 'rb') as f:
+        file_content = f.read()
+        digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+        digest.update(file_content)
+        return base64.b64encode(digest.finalize()).decode('utf-8')
 def convert_der_to_pem(der_key_filename):
     with open(der_key_filename, "rb") as der_key_file:
         der_key_data = der_key_file.read()
