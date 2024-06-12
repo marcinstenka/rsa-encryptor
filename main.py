@@ -60,9 +60,9 @@ def chooseFileAndKey(action):
     Button(fileAndKeyWindow, text="Wybierz plik", command=chooseFile).grid(row=1, column=0, padx=10)
     Button(fileAndKeyWindow, text="Wybierz klucz", command=chooseKeyFile).grid(row=1, column=2, padx=10)
     labelFile = Label(fileAndKeyWindow, text=fileString)
-    labelFile.grid(row=2, column=0, padx=10, pady=(0, 10))
+    labelFile.grid(row=3, column=0, padx=10, pady=(0, 10))
     labelKey = Label(fileAndKeyWindow, text=keyString)
-    labelKey.grid(row=2, column=2, padx=10, pady=(0, 10))
+    labelKey.grid(row=3, column=2, padx=10, pady=(0, 10))
 
     labelError = Label(fileAndKeyWindow, text="")
     labelError.grid(row=2, column=1, padx=10)
@@ -71,7 +71,7 @@ def chooseFileAndKey(action):
     elif currentAction == 'verify':
         Button(fileAndKeyWindow, text="Wybierz podpis", command=chooseXMLFile).grid(row=1, column=1, padx=10)
         labelXML = Label(fileAndKeyWindow, text=xmlString)
-        labelXML.grid(row=2, column=1, padx=10, pady=(0, 10))
+        labelXML.grid(row=3, column=1, padx=10, pady=(0, 10))
         Button(fileAndKeyWindow, text="Weryfikuj", command=verify_signature).grid(row=4, column=1, padx=10, pady=(0, 10))
     elif currentAction == 'encrypt':
         Button(fileAndKeyWindow, text="Szyfruj", command=encrypt_file).grid(row=3, column=1, padx=10, pady=(0, 10))
@@ -159,18 +159,20 @@ def sign():
     hash_of_file = hashFile()
     print(str(hash_of_file))
 
+    with open(filePath, "rb") as data_file:
+        data = data_file.read()
+
     # Podpisz hash za pomocą klucza prywatnego
     signature = private_key.sign(
-        hash_of_file.encode(),  # Konwertuj hash na bajty przed podpisaniem
-        padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH
-        ),
+        data,  # Konwertuj hash na bajty przed podpisaniem
+        padding.PKCS1v15(),
         hashes.SHA256()
     )
 
     # Konwertuj podpis do formatu Base64
     signature_base64 = base64.b64encode(signature).decode('utf-8')
+
+    print(signature)
 
     # Przekazuj podpis w formacie Base64 do funkcji generateXML
     generateXML(filePath, signature_base64)
@@ -194,18 +196,14 @@ def verify_signature():
         # Odszyfruj zaszyfrowany hash za pomocą wybranego klucza
         try:
             decrypted_hash = decrypt_hash(encrypted_hash, keyPath)
+            labelError.config(text="Plik zweryfikowano poprawnie", foreground="green")
         except Exception as e:
             labelError.config(text="Błąd deszyfrowania hasha z pliku XML", foreground="red")
             return
-
-        # Oblicz hash pliku
-        actual_hash = hashFile()
-
-        # Porównaj odszyfrowany hash z obliczonym haszem pliku
-        if actual_hash == decrypted_hash:
+        if decrypted_hash:
             labelError.config(text="Weryfikacja podpisu zakończona powodzeniem", foreground="green")
         else:
-            labelError.config(text="Weryfikacja podpisu nie powiodła się", foreground="red")
+            labelError.config(text="Weryfikacja podpisu zakończona niepowodzeniem", foreground="red")
     else:
         labelError.config(text="Wybierz plik oraz klucz przed weryfikacją", foreground="red")
 
@@ -227,39 +225,33 @@ def read_xml_file(xml_filename):
     except Exception as e:
         raise e
 
-def decrypt_hash(encrypted_hash, private_key_filename):
-    """
-    Funkcja deszyfrująca zaszyfrowany hash za pomocą klucza prywatnego.
+def decrypt_hash(encrypted_hash, public_key_filename):
 
-    Args:
-        encrypted_hash (str): Zaszyfrowany hash.
-        private_key_filename (str): Nazwa pliku zawierającego klucz prywatny.
+    # Załaduj klucz publiczny z pliku
+    with open(public_key_filename, "rb") as key_file:
+        public_key = serialization.load_pem_public_key(key_file.read())
 
-    Returns:
-        decrypted_hash (str): Odszyfrowany hash.
-    """
+    # Odczytaj dane z pliku
+    with open(filePath, "rb") as data_file:
+        data = data_file.read()
+
     try:
-        # Wczytaj klucz prywatny z pliku
-        with open(private_key_filename, 'rb') as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(),
-                password=None,
-                backend=default_backend()
-            )
+        # Dekodowanie podpisu z base64
+        signature = base64.b64decode(encrypted_hash)
 
-        # Odszyfruj zaszyfrowany hash
-        decrypted_hash = private_key.decrypt(
-            base64.b64decode(encrypted_hash),
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        ).decode('utf-8')
+        print(signature)
 
-        return decrypted_hash
+        # Weryfikacja podpisu
+        public_key.verify(
+            signature,
+            data,
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+        print("Signature is valid.")
+        return True
     except Exception as e:
-        raise e
+        print(f"Signature verification failed: {e}")
 
 
 def convert_der_to_pem(der_key_filename):
