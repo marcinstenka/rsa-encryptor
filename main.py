@@ -254,6 +254,16 @@ def decrypt_hash(encrypted_hash, public_key_filename):
         print(f"Signature verification failed: {e}")
 
 
+def read_xml_file(file_path):
+    tree = ET.parse(file_path)
+    return tree.getroot()
+
+def hashFiletxt():
+    with open(filePath, 'rb') as f:
+        file_content = f.read()
+        digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+        digest.update(file_content)
+        return base64.b64encode(digest.finalize()).decode('utf-8')
 def convert_der_to_pem(der_key_filename):
     with open(der_key_filename, "rb") as der_key_file:
         der_key_data = der_key_file.read()
