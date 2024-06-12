@@ -6,16 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="5f48b745-741b-4d4c-a81f-9558224d53ca" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/a.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/a.txt_signed.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/elo.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nowy.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/nowy.txt.enc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/private_key.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_key.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/siema.enc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/siema.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/private_key.pem" beforeDir="false" afterPath="$PROJECT_DIR$/private_key.pem" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public_key.pem" beforeDir="false" afterPath="$PROJECT_DIR$/public_key.pem" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/signature.sig" beforeDir="false" />
+
       <change beforePath="$PROJECT_DIR$/signature.xml" beforeDir="false" afterPath="$PROJECT_DIR$/signature.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -102,18 +97,14 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>175</line>
-          <option name="timeStamp" value="2" />
+          <line>170</line>
+          <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>191</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>263</line>
-          <option name="timeStamp" value="21" />
+          <line>244</line>
+          <option name="timeStamp" value="11" />
+
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
